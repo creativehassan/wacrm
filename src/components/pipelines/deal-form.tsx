@@ -30,6 +30,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
 
 interface DealFormProps {
   open: boolean;
@@ -51,6 +52,7 @@ export function DealForm({
   onSaved,
 }: DealFormProps) {
   const supabase = createClient();
+  const { accountId, profileLoading } = useAuth();
 
   const [title, setTitle] = useState("");
   const [value, setValue] = useState("");
@@ -185,11 +187,21 @@ export function DealForm({
         setSaving(false);
         return;
       }
+      if (profileLoading || !accountId) {
+        toast.error("Account still loading — try again in a moment.");
+        setSaving(false);
+        return;
+      }
       const { error } = await supabase
         .from("deals")
-        .insert({ ...payload, user_id: user.id, status: "open" });
+        .insert({
+          ...payload,
+          user_id: user.id,
+          account_id: accountId,
+          status: "open",
+        });
       if (error) {
-        toast.error("Failed to create deal");
+        toast.error(error.message || "Failed to create deal");
         setSaving(false);
         return;
       }

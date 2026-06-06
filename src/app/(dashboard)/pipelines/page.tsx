@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { GitBranch, Plus, ChevronDown, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/use-can";
+import { useAuth } from "@/hooks/use-auth";
 import { GatedButton } from "@/components/ui/gated-button";
 
 // Pipeline creation is admin-class (settings-tier write under
@@ -45,6 +46,7 @@ const SPEC_DEFAULT_STAGES = [
 
 export default function PipelinesPage() {
   const supabase = createClient();
+  const { accountId, profileLoading } = useAuth();
   const canEditSettings = useCan("edit-settings");
   const canCreateDeals = useCan("send-messages");
 
@@ -111,10 +113,11 @@ export default function PipelinesPage() {
     } = await supabase.auth.getSession();
     const user = session?.user;
     if (!user) return null;
+    if (profileLoading || !accountId) return null;
 
     const { data: pipeline, error } = await supabase
       .from("pipelines")
-      .insert({ user_id: user.id, name: "Sales Pipeline" })
+      .insert({ user_id: user.id, account_id: accountId, name: "Sales Pipeline" })
       .select()
       .single();
 
@@ -129,19 +132,25 @@ export default function PipelinesPage() {
       color: s.color,
       position: s.position,
     }));
-    await supabase.from("pipeline_stages").insert(stagesPayload);
+    const { error: stagesError } = await supabase
+      .from("pipeline_stages")
+      .insert(stagesPayload);
+    if (stagesError) {
+      console.error("Failed to seed pipeline stages:", stagesError.message);
+    }
 
     return pipeline as Pipeline;
-  }, [supabase]);
+  }, [supabase, accountId, profileLoading]);
 
   // Initial load + seed-if-empty
   useEffect(() => {
+    if (profileLoading) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
       let list = await loadPipelines();
 
-      if (list.length === 0 && !seedAttempted.current) {
+      if (list.length === 0 && !seedAttempted.current && accountId) {
         seedAttempted.current = true;
         const seeded = await seedDefaultPipeline();
         if (seeded) list = await loadPipelines();
@@ -161,7 +170,7 @@ export default function PipelinesPage() {
     return () => {
       cancelled = true;
     };
-  }, [loadPipelines, seedDefaultPipeline]);
+  }, [loadPipelines, seedDefaultPipeline, profileLoading, accountId]);
 
   // Load stages + deals whenever selected pipeline changes.
   // Clearing on no-selection is a legitimate sync with URL/prop
@@ -254,15 +263,20 @@ export default function PipelinesPage() {
       setCreating(false);
       return;
     }
+    if (profileLoading || !accountId) {
+      toast.error("Account still loading — try again in a moment.");
+      setCreating(false);
+      return;
+    }
 
     const { data: pipeline, error } = await supabase
       .from("pipelines")
-      .insert({ user_id: user.id, name })
+      .insert({ user_id: user.id, account_id: accountId, name })
       .select()
       .single();
 
     if (error || !pipeline) {
-      toast.error("Failed to create pipeline");
+      toast.error(error?.message || "Failed to create pipeline");
       setCreating(false);
       return;
     }
@@ -273,7 +287,15 @@ export default function PipelinesPage() {
       color: s.color,
       position: s.position,
     }));
-    await supabase.from("pipeline_stages").insert(stagesPayload);
+    const { error: stagesError } = await supabase
+      .from("pipeline_stages")
+      .insert(stagesPayload);
+
+    if (stagesError) {
+      toast.error(stagesError.message || "Pipeline created but stages failed");
+      setCreating(false);
+      return;
+    }
 
     setNewPipelineName("");
     setNewPipelineOpen(false);
