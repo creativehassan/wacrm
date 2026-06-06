@@ -538,6 +538,13 @@ export async function editMessageTemplate(
   return { success: data?.success !== false }
 }
 
+/** Synthetic IDs stored when WHATSAPP_TEMPLATES_DRY_RUN is on — never call Meta with these. */
+export function isSyntheticMetaTemplateId(
+  id: string | null | undefined,
+): boolean {
+  return typeof id === 'string' && id.startsWith('dry-run-')
+}
+
 export interface DeleteMessageTemplateArgs {
   wabaId: string
   accessToken: string

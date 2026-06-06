@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 import { Contact, MessageTemplate } from '@/types';
 
 export type CustomFieldOperator = 'is' | 'is_not' | 'contains';
@@ -142,8 +143,12 @@ async function fetchCustomValueIndex(
 export function useBroadcastSending(): UseBroadcastSendingReturn {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const { accountId, profileLoading } = useAuth();
 
-  async function resolveAudience(audience: AudienceConfig): Promise<Contact[]> {
+  async function resolveAudience(
+    audience: AudienceConfig,
+    accountId: string,
+  ): Promise<Contact[]> {
     const supabase = createClient();
 
     let contacts: Contact[] = [];
@@ -179,7 +184,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     } else if (audience.type === 'custom_field' && audience.customField) {
       contacts = await resolveCustomFieldAudience(supabase, audience.customField);
     } else if (audience.type === 'csv' && audience.csvContacts) {
-      contacts = await upsertCsvContacts(supabase, audience.csvContacts);
+      contacts = await upsertCsvContacts(supabase, audience.csvContacts, accountId);
     }
 
     // Apply exclude tags (works across all contact-derived audience
@@ -210,6 +215,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
   async function upsertCsvContacts(
     supabase: ReturnType<typeof createClient>,
     csvRows: { phone: string; name?: string }[],
+    accountId: string,
   ): Promise<Contact[]> {
     if (csvRows.length === 0) return [];
 
@@ -249,6 +255,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       .filter((p) => !byPhone.has(p))
       .map((phone) => ({
         user_id: user.id,
+        account_id: accountId,
         phone,
         name: uniqueByPhone.get(phone)?.name ?? null,
       }));
@@ -326,10 +333,16 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       if (!user) {
         throw new Error('You are not signed in.');
       }
+      if (profileLoading) {
+        throw new Error('Account still loading — try again in a moment.');
+      }
+      if (!accountId) {
+        throw new Error('Could not resolve your account.');
+      }
 
       // ── Step 1: Resolve audience contacts ─────────────────────────
       setProgress(5);
-      const contacts = await resolveAudience(payload.audience);
+      const contacts = await resolveAudience(payload.audience, accountId);
 
       if (contacts.length === 0) {
         throw new Error('No contacts found for this audience.');
@@ -341,6 +354,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         .from('broadcasts')
         .insert({
           user_id: user.id,
+          account_id: accountId,
           name: payload.name,
           template_name: payload.template.name,
           template_language: payload.template.language ?? 'en_US',

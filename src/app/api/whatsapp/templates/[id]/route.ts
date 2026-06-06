@@ -4,6 +4,7 @@ import { decrypt } from '@/lib/whatsapp/encryption'
 import {
   deleteMessageTemplate,
   editMessageTemplate,
+  isSyntheticMetaTemplateId,
 } from '@/lib/whatsapp/meta-api'
 import {
   validateTemplatePayload,
@@ -103,6 +104,16 @@ export async function PATCH(
         {
           error:
             'This template was never submitted to Meta — use New Template to submit it instead.',
+        },
+        { status: 400 },
+      )
+    }
+
+    if (isSyntheticMetaTemplateId(existing.meta_template_id)) {
+      return NextResponse.json(
+        {
+          error:
+            'This template was created in dry-run mode and never reached Meta — delete it locally and create a new template to submit for real.',
         },
         { status: 400 },
       )
@@ -265,7 +276,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Template not found.' }, { status: 404 })
     }
 
-    if (existing.meta_template_id && !isDryRun()) {
+    const needsMetaDelete =
+      existing.meta_template_id &&
+      !isDryRun() &&
+      !isSyntheticMetaTemplateId(existing.meta_template_id)
+
+    if (needsMetaDelete) {
       const { data: config, error: configError } = await supabase
         .from('whatsapp_config')
         .select('*')

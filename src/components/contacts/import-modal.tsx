@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -79,6 +80,7 @@ function parseCSV(text: string): ParsedRow[] {
 
 export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps) {
   const supabase = createClient();
+  const { accountId, profileLoading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
@@ -127,6 +129,8 @@ export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps
       } = await supabase.auth.getSession();
       const user = session?.user;
       if (!user) throw new Error('Not authenticated');
+      if (profileLoading) throw new Error('Account still loading — try again in a moment');
+      if (!accountId) throw new Error('Could not resolve your account');
 
       let imported = 0;
       let failed = 0;
@@ -137,6 +141,7 @@ export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps
         const chunk = parsedRows.slice(i, i + chunkSize);
         const rows = chunk.map((row) => ({
           user_id: user.id,
+          account_id: accountId,
           phone: row.phone,
           name: row.name || null,
           email: row.email || null,

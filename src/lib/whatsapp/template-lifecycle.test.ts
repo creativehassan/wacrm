@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   deleteMessageTemplate,
   editMessageTemplate,
+  isSyntheticMetaTemplateId,
   submitMessageTemplate,
 } from './meta-api';
 
@@ -154,6 +155,14 @@ describe('editMessageTemplate', () => {
         components: [],
       }),
     ).toEqual({ success: false });
+  });
+});
+
+describe('isSyntheticMetaTemplateId', () => {
+  it('detects dry-run placeholders', () => {
+    expect(isSyntheticMetaTemplateId('dry-run-a1b972f0-0b7e-4b18-93b4-f144d15a398f')).toBe(true);
+    expect(isSyntheticMetaTemplateId('1984423555520642')).toBe(false);
+    expect(isSyntheticMetaTemplateId(null)).toBe(false);
   });
 });
 
