@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
 
 interface ContactSidebarProps {
@@ -24,6 +25,7 @@ interface ContactSidebarProps {
 }
 
 export function ContactSidebar({ contact }: ContactSidebarProps) {
+  const { accountId, profileLoading } = useAuth();
   const [copied, setCopied] = useState(false);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [notes, setNotes] = useState<ContactNote[]>([]);
@@ -93,12 +95,17 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
       data: { session },
     } = await supabase.auth.getSession();
     const user = session?.user;
+    if (!user || profileLoading || !accountId) {
+      setAddingNote(false);
+      return;
+    }
 
     const { data, error } = await supabase
       .from("contact_notes")
       .insert({
         contact_id: contact.id,
-        user_id: user?.id,
+        user_id: user.id,
+        account_id: accountId,
         note_text: newNote.trim(),
       })
       .select()
@@ -109,7 +116,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
       setNewNote("");
     }
     setAddingNote(false);
-  }, [contact, newNote]);
+  }, [contact, newNote, accountId, profileLoading]);
 
   if (!contact) {
     return (

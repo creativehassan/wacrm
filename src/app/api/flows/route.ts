@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getCurrentAccount, toErrorResponse } from '@/lib/auth/account'
 import { supabaseAdmin } from '@/lib/flows/admin-client'
 import { getFlowTemplate } from '@/lib/flows/templates'
 
@@ -13,43 +13,33 @@ import { getFlowTemplate } from '@/lib/flows/templates'
  * routes themselves are open.
  */
 
-async function requireUser(): Promise<
-  | { ok: true; userId: string; supabase: Awaited<ReturnType<typeof createClient>> }
-  | { ok: false; status: number; body: { error: string } }
-> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    return { ok: false, status: 401, body: { error: 'Unauthorized' } }
-  }
-  return { ok: true, userId: user.id, supabase }
-}
-
 export async function GET() {
-  const guard = await requireUser()
-  if (!guard.ok) {
-    return NextResponse.json(guard.body, { status: guard.status })
-  }
-  const { supabase } = guard
+  try {
+    const { supabase } = await getCurrentAccount()
 
-  const { data, error } = await supabase
-    .from('flows')
-    .select('*')
-    .order('created_at', { ascending: false })
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    const { data, error } = await supabase
+      .from('flows')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    return NextResponse.json({ flows: data ?? [] })
+  } catch (err) {
+    return toErrorResponse(err)
   }
-  return NextResponse.json({ flows: data ?? [] })
 }
 
 export async function POST(request: Request) {
-  const guard = await requireUser()
-  if (!guard.ok) {
-    return NextResponse.json(guard.body, { status: guard.status })
+  let userId: string
+  let accountId: string
+  try {
+    const ctx = await getCurrentAccount()
+    userId = ctx.userId
+    accountId = ctx.accountId
+  } catch (err) {
+    return toErrorResponse(err)
   }
-  const { userId } = guard
 
   const body = (await request.json().catch(() => null)) as
     | {
@@ -85,6 +75,7 @@ export async function POST(request: Request) {
       .from('flows')
       .insert({
         user_id: userId,
+        account_id: accountId,
         name: body.name?.trim() || template.name,
         description: template.description,
         status: 'draft',
@@ -133,6 +124,7 @@ export async function POST(request: Request) {
     .from('flows')
     .insert({
       user_id: userId,
+      account_id: accountId,
       name: body.name.trim(),
       description: body.description ?? null,
       status: 'draft',

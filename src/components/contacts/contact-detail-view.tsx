@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/use-auth';
 import type { Contact, Tag, ContactTag, ContactNote, CustomField, ContactCustomValue, Deal } from '@/types';
 import {
   Sheet,
@@ -47,6 +48,7 @@ export function ContactDetailView({
   onUpdated,
 }: ContactDetailViewProps) {
   const supabase = createClient();
+  const { accountId, profileLoading } = useAuth();
 
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(false);
@@ -249,10 +251,16 @@ export function ContactDetailView({
       setSavingNote(false);
       return;
     }
+    if (profileLoading || !accountId) {
+      toast.error('Account still loading — try again in a moment.');
+      setSavingNote(false);
+      return;
+    }
 
     const { error } = await supabase.from('contact_notes').insert({
       contact_id: contactId,
       user_id: user.id,
+      account_id: accountId,
       note_text: newNote.trim(),
     });
 

@@ -32,7 +32,7 @@ const PRESET_COLORS = [
 
 export function TagManager() {
   const supabase = createClient();
-  const { user, loading: authLoading } = useAuth();
+  const { user, accountId, profileLoading, loading: authLoading } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -86,11 +86,16 @@ export function TagManager() {
         toast.error('Not authenticated');
         return;
       }
+      if (profileLoading || !accountId) {
+        toast.error('Account still loading — try again in a moment.');
+        return;
+      }
 
       const { error } = await supabase
         .from('tags')
         .insert({
           user_id: user.id,
+          account_id: accountId,
           name: newTagName.trim(),
           color: selectedColor,
         });

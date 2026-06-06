@@ -27,6 +27,7 @@ export async function POST(
     .from('automations')
     .insert({
       user_id: user.id,
+      account_id: original.account_id,
       name: `${original.name} (Copy)`,
       description: original.description,
       trigger_type: original.trigger_type,
