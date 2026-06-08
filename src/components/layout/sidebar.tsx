@@ -272,39 +272,13 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
         {/* User section */}
         <div className="shrink-0 border-t border-slate-800 p-3">
-          {/* Account name display — only surfaced when the user is
-              opted into the account_sharing beta flag. For solo
-              users (the default) the account is named after them,
-              so showing it here would just duplicate the user name
-              below. Once the flag is on the user is at minimum
-              aware of which shared account they're acting in. */}
+          {/* Account name — only when account_sharing beta is on. */}
           {accountSharingEnabled && account?.name ? (
             <div className="mb-2 flex items-center gap-2 px-3 text-xs text-slate-500">
               <UsersRound className="size-3.5 shrink-0" />
-              {/* `title=` exposes the full name on hover when it
-                  gets truncated (long account names + narrow
-                  sidebars). Cheap a11y win. */}
               <span className="truncate" title={account.name}>
                 {account.name}
               </span>
-              {accountRole ? (
-                // Always render the chip — owners used to be
-                // invisible here, which made them indistinguishable
-                // from admins at a glance. Now everyone sees their
-                // role (with a colour cue) regardless of tier.
-                (() => {
-                  const meta = ROLE_CHIP[accountRole];
-                  const Icon = meta.icon;
-                  return (
-                    <span
-                      className={`ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${meta.className}`}
-                    >
-                      <Icon className="size-3" />
-                      {meta.label}
-                    </span>
-                  );
-                })()
-              ) : null}
             </div>
           ) : null}
           <DropdownMenu>
@@ -323,9 +297,25 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white">
-                  {profile?.full_name ?? "User"}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-sm font-medium text-white">
+                    {profile?.full_name ?? "User"}
+                  </p>
+                  {accountRole && !profileLoading ? (
+                    (() => {
+                      const meta = ROLE_CHIP[accountRole];
+                      const Icon = meta.icon;
+                      return (
+                        <span
+                          className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${meta.className}`}
+                        >
+                          <Icon className="size-3" />
+                          {meta.label}
+                        </span>
+                      );
+                    })()
+                  ) : null}
+                </div>
                 <p className="truncate text-xs text-slate-400">
                   {profile?.email ?? ""}
                 </p>
