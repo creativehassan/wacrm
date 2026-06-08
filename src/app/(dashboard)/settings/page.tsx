@@ -8,11 +8,13 @@ import {
   User,
   Palette,
   UsersRound,
+  Columns3,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { WhatsAppConfig } from '@/components/settings/whatsapp-config';
 import { TemplateManager } from '@/components/settings/template-manager';
 import { TagManager } from '@/components/settings/tag-manager';
+import { CustomFieldManager } from '@/components/settings/custom-field-manager';
 import { ProfileForm } from '@/components/settings/profile-form';
 import { PasswordForm } from '@/components/settings/password-form';
 import { SessionsCard } from '@/components/settings/sessions-card';
@@ -25,6 +27,7 @@ const BASE_TAB_VALUES = [
   'whatsapp',
   'templates',
   'tags',
+  'custom-fields',
   'appearance',
 ] as const;
 const FLAGGED_TAB_VALUES = ['members'] as const;
@@ -78,13 +81,13 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-2xl font-bold text-white">Settings</h1>
         <p className="text-sm text-slate-400 mt-1">
-          Manage your profile, WhatsApp® integration, message templates, and
-          tags.
+          Manage your profile, WhatsApp® integration, message templates, tags,
+          and custom fields.
         </p>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => onChange(v as TabValue)}>
-        <TabsList className="bg-slate-900 border border-slate-700">
+        <TabsList className="bg-slate-900 border border-slate-700 w-full max-w-full overflow-x-auto flex-nowrap justify-start">
           <TabsTrigger
             value="profile"
             className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
@@ -112,6 +115,13 @@ export default function SettingsPage() {
           >
             <Tag className="size-4" />
             Tags
+          </TabsTrigger>
+          <TabsTrigger
+            value="custom-fields"
+            className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
+          >
+            <Columns3 className="size-4" />
+            Custom Fields
           </TabsTrigger>
           <TabsTrigger
             value="appearance"
@@ -150,6 +160,10 @@ export default function SettingsPage() {
 
         <TabsContent value="tags">
           <TagManager />
+        </TabsContent>
+
+        <TabsContent value="custom-fields">
+          <CustomFieldManager />
         </TabsContent>
 
         <TabsContent value="appearance">

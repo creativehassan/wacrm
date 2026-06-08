@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
+import { CustomFieldsSettingsLink } from '@/components/settings/custom-field-manager';
 import type { Contact, Tag, ContactTag, ContactNote, CustomField, ContactCustomValue, Deal } from '@/types';
 import {
   Sheet,
@@ -588,7 +589,8 @@ export function ContactDetailView({
                   </div>
                 ) : customFields.length === 0 ? (
                   <p className="text-sm text-slate-500 text-center py-8">
-                    No custom fields defined. Create them in Settings.
+                    No custom fields defined. Create one in{' '}
+                    <CustomFieldsSettingsLink />.
                   </p>
                 ) : (
                   <div className="space-y-3">

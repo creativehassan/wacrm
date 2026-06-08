@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { CustomField, Tag } from '@/types';
+import { CustomFieldsSettingsLink } from '@/components/settings/custom-field-manager';
 import { Button } from '@/components/ui/button';
 import {
   Users,
@@ -346,7 +347,8 @@ export function Step2SelectAudience({
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
           ) : customFields.length === 0 ? (
             <p className="text-xs text-slate-400">
-              No custom fields defined. Create one in Settings → Custom Fields.
+              No custom fields defined. Create one in{' '}
+              <CustomFieldsSettingsLink />.
             </p>
           ) : (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px_minmax(0,1fr)]">
